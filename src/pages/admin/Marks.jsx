@@ -1,55 +1,67 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../../components/common/Layout";
 import PageHeader from "../../components/common/PageHeader";
 import Table from "../../components/common/Table";
 import BarChart from "../../components/common/BarChart";
-import { useData } from "../../context/DataContext";
+import { useAuth } from "../../context/AuthContext";
+import { fetchMarksReport, fetchStudents } from "../../services/apiClient";
 
 const AdminMarks = () => {
-  const { marks, students, classes } = useData();
+  const { token } = useAuth();
+  const [marks, setMarks] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      if (!token) return;
+      setLoading(true);
+      setError("");
+      try {
+        const [marksRes, studentsRes] = await Promise.all([fetchMarksReport(token), fetchStudents(token)]);
+        setMarks(marksRes || []);
+        setStudents(studentsRes || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [token]);
 
   const columns = [
-    { key: "course", label: "Course" },
-    { key: "term", label: "Term" },
-    {
-      key: "studentId",
-      label: "Student",
-      render: (value) => students.find((s) => s.id === value)?.name
-    },
-    {
-      key: "studentId",
-      label: "Class",
-      render: (value) => {
-        const student = students.find((s) => s.id === value);
-        return classes.find((c) => c.id === student?.classId)?.name || "-";
-      }
-    },
-    { key: "score", label: "Score" },
-    { key: "total", label: "Total" }
+    { key: "subject", label: "Subject" },
+    { key: "marks", label: "Marks" },
+    { key: "student", label: "Student", render: (_v, row) => row.student?.user?.name || "Unknown" },
+    { key: "email", label: "Email", render: (_v, row) => row.student?.user?.email || "—" }
   ];
 
   const averages = useMemo(() => {
+    if (!marks.length) return [];
     const grouped = {};
     marks.forEach((m) => {
-      const student = students.find((s) => s.id === m.studentId);
-      const cls = student ? classes.find((c) => c.id === student.classId) : null;
-      const key = cls?.name || "Unknown";
+      const student = m.student;
+      const key = `${student?.className || "Class"}`;
       if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(m.score);
+      grouped[key].push(m.marks);
     });
-    return Object.entries(grouped).map(([label, scores]) => ({
+    return Object.entries(grouped).map(([label, values]) => ({
       label,
-      value: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      value: Math.round(values.reduce((a, b) => a + b, 0) / values.length)
     }));
-  }, [marks, students, classes]);
+  }, [marks]);
 
   return (
     <Layout>
       <PageHeader title="Marks Reports" description="Track marks uploaded by teachers across classes." />
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <div className="grid gap-6 lg:grid-cols-2">
         <Table columns={columns} data={marks} />
         <BarChart data={averages} title="Average scores by class" />
       </div>
+      {loading ? <p className="text-sm text-slate-500">Loading marks...</p> : null}
     </Layout>
   );
 };

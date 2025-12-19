@@ -1,16 +1,33 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../../components/common/Layout";
 import PageHeader from "../../components/common/PageHeader";
 import Table from "../../components/common/Table";
 import ProgressBar from "../../components/common/ProgressBar";
 import { useAuth } from "../../context/AuthContext";
-import { useData } from "../../context/DataContext";
+import { fetchMyAttendance } from "../../services/apiClient";
 
 const StudentAttendancePage = () => {
-  const { user } = useAuth();
-  const { students, studentAttendance } = useData();
-  const profile = students.find((s) => s.email === user.email) || students[0];
-  const records = studentAttendance[profile?.id] || [];
+  const { token } = useAuth();
+  const [records, setRecords] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!token) return;
+      setLoading(true);
+      setError("");
+      try {
+        const data = await fetchMyAttendance(token);
+        setRecords(data || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [token]);
 
   const stats = useMemo(() => {
     const presentCount = records.filter((r) => r.status === "Present").length;
@@ -27,6 +44,7 @@ const StudentAttendancePage = () => {
   return (
     <Layout>
       <PageHeader title="Attendance" description="Track your attendance percentage and daily presence." />
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm space-y-3 lg:col-span-2">
           <h3 className="text-lg font-semibold text-slate-900">Daily Log</h3>
@@ -45,6 +63,7 @@ const StudentAttendancePage = () => {
               <p className="text-xl font-bold text-red-500">{stats.absent}</p>
             </div>
           </div>
+          {loading ? <p className="text-xs text-slate-500">Loading attendance...</p> : null}
         </div>
       </div>
     </Layout>

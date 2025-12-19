@@ -1,61 +1,26 @@
-import React, { useState } from "react";
+import React from "react";
 import Layout from "../../components/common/Layout";
 import PageHeader from "../../components/common/PageHeader";
-import Table from "../../components/common/Table";
-import { useAuth } from "../../context/AuthContext";
-import { useData } from "../../context/DataContext";
 
 const TeacherClasses = () => {
-  const { user } = useAuth();
-  const { teachers, classes, getStudentsByClass } = useData();
-  const teacherProfile = teachers.find((t) => t.email === user.email) || teachers[0];
-  const assignedClasses = classes.filter((c) => c.teacherId === teacherProfile?.id);
-  const [selectedClassId, setSelectedClassId] = useState(assignedClasses[0]?.id || "");
-
-  const students = selectedClassId ? getStudentsByClass(selectedClassId) : [];
-  const classColumns = [
-    { key: "name", label: "Class" },
-    { key: "section", label: "Section" },
-    { key: "room", label: "Room" },
-    { key: "schedule", label: "Schedule" }
-  ];
-
-  const studentColumns = [
-    { key: "name", label: "Student" },
-    { key: "rollNo", label: "Roll No" },
-    { key: "email", label: "Email" }
-  ];
-
   return (
     <Layout>
-      <PageHeader title="My Classes" description="View assigned classes and their enrolled students." />
+      <PageHeader
+        title="My Classes"
+        description="Class rosters are managed by Admin. Use the Students page to copy IDs when recording attendance or marks."
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-slate-900">Assigned Classes</h3>
-          <Table columns={classColumns} data={assignedClasses} />
-        </div>
-
-        <div className="space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-slate-800">Students in Class</p>
-              <p className="text-xs text-slate-500">Select a class to load the roster.</p>
-            </div>
-            <select
-              value={selectedClassId}
-              onChange={(e) => setSelectedClassId(e.target.value)}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              {assignedClasses.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.name} - {cls.section}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Table columns={studentColumns} data={students} />
-        </div>
+      <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm space-y-3">
+        <h3 className="text-lg font-semibold text-slate-900">Heads up</h3>
+        <p className="text-sm text-slate-700">
+          The current backend stores students with their className and section. Admins can add or update students to
+          reflect real rosters. Teachers can then reference student IDs while posting attendance or marks.
+        </p>
+        <ul className="list-disc list-inside space-y-2 text-sm text-slate-700">
+          <li>Ask the admin to enroll students with the correct class/section.</li>
+          <li>Open Admin &gt; Students to copy the student ID you need.</li>
+          <li>Submit attendance/marks with that ID from the teacher pages.</li>
+        </ul>
       </div>
     </Layout>
   );

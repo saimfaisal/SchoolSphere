@@ -1,68 +1,72 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../../components/common/Layout";
 import PageHeader from "../../components/common/PageHeader";
 import Table from "../../components/common/Table";
-import { useData } from "../../context/DataContext";
+import { useAuth } from "../../context/AuthContext";
+import { deleteTeacherApi, fetchTeachersAdmin, registerUser } from "../../services/apiClient";
 
 const TeachersPage = () => {
-  const { teachers, addTeacher, updateTeacher, deleteTeacher } = useData();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", specialization: "" });
-  const [editingId, setEditingId] = useState(null);
+  const { token } = useAuth();
+  const [teachers, setTeachers] = useState([]);
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const columns = useMemo(
+    () => [
+      { key: "name", label: "Name" },
+      { key: "email", label: "Email" },
+      { key: "role", label: "Role" }
+    ],
+    []
+  );
+
+  const loadTeachers = async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const data = await fetchTeachersAdmin(token);
+      setTeachers(data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTeachers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.name || !form.email) {
-      setError("Name and email are required.");
+    if (!form.name || !form.email || !form.password) {
+      setError("Name, email, and password are required.");
       return;
     }
-
-    if (editingId) {
-      updateTeacher(editingId, form);
-    } else {
-      addTeacher(form);
+    try {
+      await registerUser(token, { ...form, role: "teacher" });
+      setForm({ name: "", email: "", password: "" });
+      loadTeachers();
+    } catch (err) {
+      setError(err.message);
     }
-    setForm({ name: "", email: "", phone: "", specialization: "" });
-    setEditingId(null);
   };
-
-  const startEdit = (row) => {
-    setEditingId(row.id);
-    setForm({ name: row.name, email: row.email, phone: row.phone, specialization: row.specialization });
-  };
-
-  const columns = [
-    { key: "name", label: "Name" },
-    { key: "email", label: "Email" },
-    { key: "phone", label: "Phone" },
-    { key: "specialization", label: "Specialization" }
-  ];
 
   return (
     <Layout>
-      <PageHeader title="Manage Teachers" description="Onboard or update teacher records." />
+      <PageHeader title="Manage Teachers" description="Register teachers against the live backend." />
       <div className="grid gap-6 lg:grid-cols-2">
         <form onSubmit={handleSubmit} className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">{editingId ? "Edit Teacher" : "Add Teacher"}</h3>
-            {editingId ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingId(null);
-                  setForm({ name: "", email: "", phone: "", specialization: "" });
-                }}
-                className="text-sm text-primary"
-              >
-                Cancel
-              </button>
-            ) : null}
+            <h3 className="text-lg font-semibold text-slate-900">Add Teacher</h3>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div>
@@ -89,23 +93,14 @@ const TeachersPage = () => {
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-700">Phone</label>
+              <label className="text-sm font-medium text-slate-700">Password</label>
               <input
-                name="phone"
-                value={form.phone}
+                type="password"
+                name="password"
+                value={form.password}
                 onChange={handleChange}
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                placeholder="03xx-xxxxxxx"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700">Specialization</label>
-              <input
-                name="specialization"
-                value={form.specialization}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                placeholder="Data Science"
+                placeholder="Temporary password"
               />
             </div>
           </div>
@@ -114,26 +109,30 @@ const TeachersPage = () => {
             type="submit"
             className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-primary/90"
           >
-            {editingId ? "Update Teacher" : "Add Teacher"}
+            Add Teacher
           </button>
         </form>
 
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-slate-900">Teacher Directory</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-slate-900">Teacher Directory</h3>
+            {loading ? <span className="text-xs text-slate-500">Loading…</span> : null}
+          </div>
           <Table
             columns={columns}
             data={teachers}
             actions={(row) => (
               <div className="flex gap-2">
                 <button
-                  className="rounded-md bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
-                  onClick={() => startEdit(row)}
-                >
-                  Edit
-                </button>
-                <button
                   className="rounded-md bg-red-500 px-3 py-1 text-xs font-semibold text-white"
-                  onClick={() => deleteTeacher(row.id)}
+                  onClick={async () => {
+                    try {
+                      await deleteTeacherApi(token, row._id);
+                      loadTeachers();
+                    } catch (err) {
+                      setError(err.message);
+                    }
+                  }}
                 >
                   Delete
                 </button>

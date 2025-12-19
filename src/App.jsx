@@ -1,7 +1,6 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { DataProvider } from "./context/DataContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import Login from "./pages/auth/Login";
 import Logout from "./pages/auth/Logout";
@@ -62,9 +61,7 @@ const AppRoutes = () => {
 const App = () => {
   return (
     <AuthProvider>
-      <DataProvider>
-        <AppRoutes />
-      </DataProvider>
+      <AppRoutes />
     </AuthProvider>
   );
 };

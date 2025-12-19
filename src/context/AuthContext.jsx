@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { loginApi } from "../services/apiClient";
 
 const AuthContext = createContext(null);
 
@@ -7,6 +8,7 @@ export const AuthProvider = ({ children }) => {
     const cached = localStorage.getItem("sms-user");
     return cached ? JSON.parse(cached) : null;
   });
+  const [token, setToken] = useState(() => localStorage.getItem("sms-token") || "");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -15,32 +17,42 @@ export const AuthProvider = ({ children }) => {
     } else {
       localStorage.removeItem("sms-user");
     }
+    if (token) {
+      localStorage.setItem("sms-token", token);
+    } else {
+      localStorage.removeItem("sms-token");
+    }
   }, [user]);
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem("sms-token", token);
+    } else {
+      localStorage.removeItem("sms-token");
+    }
+  }, [token]);
 
   const login = async ({ email, password, role }) => {
     setIsLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const friendlyName = email ? email.split("@")[0] : "Guest";
-        const payload = {
-          id: `${role}-${Date.now()}`,
-          name: friendlyName.charAt(0).toUpperCase() + friendlyName.slice(1),
-          email,
-          role
-        };
-        setUser(payload);
-        setIsLoading(false);
-        resolve(payload);
-      }, 500);
-    });
+    try {
+      const { token: jwt, user: payload } = await loginApi(email, password);
+      setUser(payload);
+      setToken(jwt);
+      setIsLoading(false);
+      return payload;
+    } catch (err) {
+      setIsLoading(false);
+      throw err;
+    }
   };
 
   const logout = () => {
     setUser(null);
+    setToken("");
   };
 
   const value = {
     user,
+    token,
     isLoading,
     login,
     logout,

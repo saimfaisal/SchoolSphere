@@ -1,23 +1,15 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import Layout from "../../components/common/Layout";
 import PageHeader from "../../components/common/PageHeader";
-import Table from "../../components/common/Table";
 import { useAuth } from "../../context/AuthContext";
-import { useData } from "../../context/DataContext";
+import { submitMarks } from "../../services/apiClient";
 
 const TeacherMarks = () => {
-  const { user } = useAuth();
-  const { teachers, classes, students, marks, addMark } = useData();
-  const teacherProfile = teachers.find((t) => t.email === user.email) || teachers[0];
-  const assignedClasses = classes.filter((c) => c.teacherId === teacherProfile?.id);
-  const studentsInAssigned = students.filter((s) => assignedClasses.some((c) => c.id === s.classId));
-
+  const { token } = useAuth();
   const [form, setForm] = useState({
-    studentId: studentsInAssigned[0]?.id || "",
-    course: "Course work",
-    term: "Mid",
-    score: "",
-    total: "100"
+    studentId: "",
+    subject: "",
+    marks: ""
   });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -27,109 +19,62 @@ const TeacherMarks = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setMessage("");
-    if (!form.studentId || !form.course || !form.score || !form.total) {
-      setError("All fields are required.");
+    if (!form.studentId || !form.subject || form.marks === "") {
+      setError("Student ID, subject, and marks are required.");
       return;
     }
-    addMark({ ...form, score: Number(form.score), total: Number(form.total) });
-    setMessage("Marks uploaded successfully.");
-    setForm((prev) => ({ ...prev, score: "", course: prev.course }));
+    try {
+      await submitMarks(token, { ...form, marks: Number(form.marks) });
+      setMessage("Marks uploaded to backend.");
+      setForm((prev) => ({ ...prev, subject: prev.subject, marks: "", studentId: "" }));
+    } catch (err) {
+      setError(err.message);
+    }
   };
-
-  const myMarks = useMemo(
-    () =>
-      marks.filter((m) => {
-        const student = students.find((s) => s.id === m.studentId);
-        return assignedClasses.some((c) => c.id === student?.classId);
-      }),
-    [marks, students, assignedClasses]
-  );
-
-  const columns = [
-    { key: "course", label: "Course" },
-    { key: "term", label: "Term" },
-    {
-      key: "studentId",
-      label: "Student",
-      render: (value) => students.find((s) => s.id === value)?.name
-    },
-    { key: "score", label: "Score" },
-    { key: "total", label: "Total" }
-  ];
 
   return (
     <Layout>
-      <PageHeader title="Upload Marks" description="Submit marks for students in your assigned classes." />
+      <PageHeader title="Upload Marks" description="Submit marks directly to MongoDB for any student ID." />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <form onSubmit={handleSubmit} className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
-          <h3 className="text-lg font-semibold text-slate-900">Marks Entry</h3>
-          <div>
-            <label className="text-sm font-medium text-slate-700">Student</label>
-            <select
-              name="studentId"
-              value={form.studentId}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              {studentsInAssigned.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.name} ({student.rollNo})
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Marks Entry</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-700">Course / Activity</label>
+              <label className="text-sm font-medium text-slate-700">Student ID</label>
               <input
-                name="course"
-                value={form.course}
+                name="studentId"
+                value={form.studentId}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                placeholder="Paste student _id"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">Subject</label>
+              <input
+                name="subject"
+                value={form.subject}
                 onChange={handleChange}
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 placeholder="Web Engineering"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700">Term</label>
-              <select
-                name="term"
-                value={form.term}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              >
-                <option value="Mid">Mid</option>
-                <option value="Final">Final</option>
-                <option value="Quiz">Quiz</option>
-                <option value="Assignment">Assignment</option>
-              </select>
-            </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-700">Score</label>
+              <label className="text-sm font-medium text-slate-700">Marks</label>
               <input
                 type="number"
-                name="score"
-                value={form.score}
+                name="marks"
+                value={form.marks}
                 onChange={handleChange}
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
                 placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-700">Total</label>
-              <input
-                type="number"
-                name="total"
-                value={form.total}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                placeholder="100"
               />
             </div>
           </div>
@@ -142,11 +87,9 @@ const TeacherMarks = () => {
             Save Marks
           </button>
         </form>
-
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-slate-900">Marks Submitted</h3>
-          <Table columns={columns} data={myMarks} />
-        </div>
+        <p className="text-xs text-slate-500">
+          Copy the student ID from Admin &gt; Students. Students will see these entries in their Marks page.
+        </p>
       </div>
     </Layout>
   );

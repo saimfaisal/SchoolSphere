@@ -6,139 +6,149 @@ import heroIllustration from "../../assets/hero-illustration.svg";
 const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
-  const [form, setForm] = useState({ email: "", password: "", role: "admin" });
-  const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
+  const [credentials, setCredentials] = useState({
+    admin: { email: "", password: "" },
+    teacher: { email: "", password: "" },
+    student: { email: "", password: "" }
+  });
+  const [selectedRole, setSelectedRole] = useState("admin");
+  const [errors, setErrors] = useState({ admin: "", teacher: "", student: "" });
+  const [pendingRole, setPendingRole] = useState("");
 
-  const handleChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const handleChange = (role, field, value) => {
+    setCredentials((prev) => ({ ...prev, [role]: { ...prev[role], [field]: value } }));
   };
 
-  const handleSubmit = async () => {
-    setError("");
-    if (!form.email || !form.password) {
-      setError("Email and password are required.");
+  const handleSubmit = async (role) => {
+    setErrors((prev) => ({ ...prev, [role]: "" }));
+    const { email, password } = credentials[role];
+    if (!email || !password) {
+      setErrors((prev) => ({ ...prev, [role]: "Email and password are required." }));
       return;
     }
-    setPending(true);
+    setPendingRole(role);
     try {
-      await login({ email: form.email, password: form.password, role: form.role });
-      navigate(`/${form.role}`);
+      await login({ email, password, role });
+      navigate(`/${role}`);
     } catch (err) {
-      setError(err.message);
+      setErrors((prev) => ({ ...prev, [role]: err.message }));
     } finally {
-      setPending(false);
+      setPendingRole("");
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950">
-      <div className="absolute inset-0 opacity-60">
-        <div className="absolute -left-24 -top-32 h-80 w-80 rounded-full bg-primary/15 blur-3xl" />
-        <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-accent/15 blur-3xl" />
+    <div className="relative min-h-screen overflow-hidden bg-slate-50">
+      <div className="absolute inset-0 opacity-70">
+        <div className="absolute -left-24 -top-32 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
         <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.05),_transparent_45%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.3),_transparent_50%)]" />
       </div>
 
-      <nav className="relative z-10 flex items-center justify-between border-b border-white/10 bg-slate-950/80 px-6 py-4 backdrop-blur">
-        <div className="flex items-center gap-2 text-white">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-lg">🎓</span>
+      <nav className="relative z-10 flex items-center justify-between border-b border-slate-100 bg-white/90 px-6 py-4 backdrop-blur shadow-sm">
+        <div className="flex items-center gap-2 text-slate-900">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-lg">🎓</span>
           <div>
             <p className="text-sm font-semibold">SchoolSphere</p>
-            <p className="text-xs text-white/70">Smart campus suite</p>
+            <p className="text-xs text-slate-500">School Management</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
-          <span className="rounded-full bg-white/5 px-3 py-1">Home</span>
-          <span className="rounded-full bg-white/5 px-3 py-1">Features</span>
-          <span className="rounded-full bg-white/5 px-3 py-1">Contact</span>
+        <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <span className="rounded-full bg-slate-100 px-3 py-1">Home</span>
+          <span className="rounded-full bg-slate-100 px-3 py-1">Features</span>
+          <span className="rounded-full bg-slate-100 px-3 py-1">Contact</span>
         </div>
       </nav>
 
-      <main className="relative z-10 mx-auto max-w-6xl px-4 py-12 space-y-8">
-        <div className="text-center text-white space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/70">SchoolSphere</p>
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight">SchoolSphere Management</h1>
-          <p className="text-base md:text-lg text-white/75">
-            Admin, Teacher, and Student dashboards with role-based access. Choose a role, enter your email and password, and jump in.
-          </p>
-        </div>
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-96px)] max-w-6xl items-center justify-center px-4 py-10">
+        <div className="w-full overflow-hidden rounded-3xl border border-white/50 bg-white/80 shadow-2xl backdrop-blur-xl grid md:grid-cols-2 md:min-h-[520px]">
+          {/* Left: login card */}
+          <div className="bg-white/90 text-slate-900 px-10 py-12 h-full flex flex-col">
+            <div className="mb-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">Access portal</p>
+              <h2 className="text-3xl font-bold">Sign in to SchoolSphere</h2>
+              <p className="text-sm text-slate-500">Use your seeded credentials or any user you created via admin.</p>
+            </div>
 
-        <div className="grid gap-8 lg:grid-cols-2 items-start">
-          <div className="flex justify-center order-2 lg:order-1">
-            <div className="w-full max-w-2xl min-h-[520px] rounded-2xl border border-white/10 bg-white/95 shadow-2xl shadow-black/15 backdrop-blur transition hover:-translate-y-1 hover:shadow-3xl">
-              <div className="h-2 rounded-t-2xl bg-gradient-to-r from-primary via-indigo-500 to-emerald-500" />
-              <div className="p-8 md:p-10 space-y-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unified Login</p>
-                    <p className="text-sm text-slate-500">Pick a role, add your email/password, and continue.</p>
-                  </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase text-slate-700">
-                    {form.role}
-                  </span>
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Login</p>
+                  <p className="text-sm text-slate-500">Choose role and enter credentials</p>
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600">Login as</label>
-                    <select
-                      value={form.role}
-                      onChange={(e) => handleChange("role", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="teacher">Teacher</option>
-                      <option value="student">Student</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600">Email</label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => handleChange("email", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none"
-                      placeholder={`your.${form.role}@campus.edu`}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600">Password</label>
-                    <input
-                      type="password"
-                      value={form.password}
-                      onChange={(e) => handleChange("password", e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  {error ? <p className="text-xs text-red-600">{error}</p> : null}
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isLoading || pending}
-                    className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-slate-800 disabled:opacity-50"
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase text-slate-700">
+                  {selectedRole}
+                </span>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">Login as</label>
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   >
-                    {pending ? "Signing in..." : `Login as ${form.role}`}
-                  </button>
+                    <option value="admin">Admin</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
+                  </select>
                 </div>
               </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">Email</label>
+                  <input
+                    type="email"
+                    value={credentials[selectedRole].email}
+                    onChange={(e) => handleChange(selectedRole, "email", e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none"
+                    placeholder={`your.${selectedRole}@campus.edu`}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600">Password</label>
+                  <input
+                    type="password"
+                    value={credentials[selectedRole].password}
+                    onChange={(e) => handleChange(selectedRole, "password", e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-primary focus:bg-white focus:outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+              {errors[selectedRole] ? <p className="text-xs text-red-600">{errors[selectedRole]}</p> : null}
+              <button
+                onClick={() => handleSubmit(selectedRole)}
+                disabled={isLoading || pendingRole === selectedRole}
+                className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-primary/90 disabled:opacity-50"
+              >
+                {pendingRole === selectedRole ? "Signing in..." : `Login as ${selectedRole}`}
+              </button>
             </div>
+
+            <p className="mt-6 text-xs text-slate-500">
+              Seeded: admin@school.com / Admin@123, teacher@school.com / Teacher@123, student@school.com / Student@123 (or any you created).
+            </p>
           </div>
 
-          <div className="order-1 lg:order-2 flex justify-center">
-            <div className="w-full max-w-2xl min-h-[520px] overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/30 bg-white/5 backdrop-blur">
-              <img
-                src={heroIllustration}
-                alt="SchoolSphere school management illustration"
-                className="h-full w-full object-cover"
-              />
+          {/* Right: school illustration */}
+          <div className="hidden md:flex bg-slate-900/60 p-8 relative h-full items-center justify-center">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-emerald-400/20" />
+            <div className="relative h-full w-full flex flex-col items-center justify-center gap-4">
+              <img src={heroIllustration} alt="School illustration" className="h-full w-full object-cover drop-shadow-2xl rounded-2xl" />
+              <div className="text-sm text-white/80 text-center">
+                <p className="font-semibold">SchoolSphere</p>
+                <p>Secure, role-based portals for your FYP demo.</p>
+              </div>
+            </div>
+            <div className="absolute bottom-4 left-4 hidden">
+              <p className="font-semibold">SchoolSphere</p>
+              <p>Secure, role-based portals for your FYP demo.</p>
             </div>
           </div>
         </div>
-
-        <p className="mt-8 text-center text-xs text-white/70">
-          Tip: start as Admin to explore the setup, then try Teacher and Student flows. Sign out from the top bar anytime.
-        </p>
-      </main>
+      </div>
     </div>
   );
 };
